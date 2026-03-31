@@ -1,0 +1,60 @@
+plugins {
+    id 'net.neoforged.moddev' version "${mdg_version}"
+}
+
+version = mod_version
+group = mod_group
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.neoforged.net/releases' }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+neoForge {
+    version = neoforge_version
+
+    runs {
+        configureEach {
+            ideName = "NeoForge 26.1 ${it.name.capitalize()}"
+        }
+        client { client() }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir '../shared/src/main/java'
+            srcDir 'src/main/java'
+        }
+        resources {
+            srcDir 'src/main/resources'
+        }
+    }
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    inputs.property "mod_version", mod_version
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand([
+                "mod_id": mod_id,
+                "mod_name": mod_name,
+                "mod_version": mod_version,
+                "mod_description": mod_description,
+                "license": license,
+                "neoforge_version": neoforge_version
+        ])
+    }
+}
+
