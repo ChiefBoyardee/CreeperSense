@@ -28,3 +28,6 @@ runs
 
 # temp folders
 .tmp-*/
+
+# CI artifact downloads (local)
+release-staging/
