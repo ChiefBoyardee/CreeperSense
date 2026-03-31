@@ -25,6 +25,7 @@ runs
 
 # local editor / tooling
 .vscode/
+CreeperSense.code-workspace
 
 # temp folders
 .tmp-*/

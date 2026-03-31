@@ -84,11 +84,11 @@ jobs:
           cache: gradle
 
       - name: Ensure Gradle wrapper executable
-        run: chmod +x ./gradlew
+        run: chmod +x ./gradlew mc-26.1/gradlew
 
       - name: Build
         working-directory: mc-26.1/${{ matrix.loader }}
-        run: bash ../gradlew build --no-daemon
+        run: ../gradlew build --no-daemon
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
