@@ -13,6 +13,17 @@
   - one **chevron per creeper** behind you, arranged along a rear arc
 - **Color/intensity**: chevrons fade **green → yellow → red** as danger increases, with a subtle pulse. If a creeper is **swelling**, its threat ramps up faster.
 
+### Modes + settings
+
+Open settings in-game with **O** (rebindable in Controls):
+
+- **Chevrons**: default directional chevrons (one per creeper behind you).
+- **Peripheral**: ARMA-style peripheral circles along the screen edge.
+- **Meme (high danger)**: adds meme overlays only when danger is high (still keeps directional chevrons).
+
+Optional:
+- **Difficulty scaling**: reduces warning radius on higher difficulty to give you less time to react.
+
 ### Compatibility
 
 - **Minecraft 1.20.1**
