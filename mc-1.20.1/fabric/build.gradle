@@ -1,0 +1,57 @@
+plugins {
+  id 'fabric-loom' version '1.6-SNAPSHOT'
+}
+
+version = mod_version
+group = mod_group
+
+repositories {
+  maven { url = 'https://maven.fabricmc.net' }
+  mavenCentral()
+}
+
+dependencies {
+  minecraft "com.mojang:minecraft:${minecraft_version}"
+  mappings loom.officialMojangMappings()
+  modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+  modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+}
+
+java {
+  toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+loom {
+  runs {
+    client {
+      client()
+      ideConfigGenerated(true)
+      runDir('../run')
+    }
+  }
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir '../shared/src/main/java'
+      srcDir 'src/main/java'
+    }
+    resources { srcDir 'src/main/resources' }
+  }
+}
+
+processResources {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  inputs.property "version", mod_version
+  filesMatching("fabric.mod.json") {
+    expand([
+      "id": mod_id,
+      "name": mod_name,
+      "version": mod_version,
+      "description": mod_description,
+      "license": license
+    ])
+  }
+}
+

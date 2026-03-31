@@ -1,0 +1,66 @@
+buildscript {
+  repositories {
+    maven { url = 'https://maven.minecraftforge.net' }
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath 'net.minecraftforge.gradle:ForgeGradle:6.0.+'
+  }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+version = mod_version
+group = mod_group
+
+minecraft {
+  mappings channel: 'official', version: minecraft_version
+  runs {
+    client {
+      workingDirectory project.file('../run')
+      property 'forge.logging.console.level', 'info'
+      mods {
+        "${mod_id}" {
+          source sourceSets.main
+        }
+      }
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  minecraft "net.minecraftforge:forge:${forge_version}"
+}
+
+java {
+  toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir '../shared/src/main/java'
+      srcDir 'src/main/java'
+    }
+    resources { srcDir 'src/main/resources' }
+  }
+}
+
+processResources {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  filesMatching("META-INF/mods.toml") {
+    expand([
+      "mod_id": mod_id,
+      "mod_name": mod_name,
+      "mod_version": mod_version,
+      "mod_description": mod_description,
+      "license": license
+    ])
+  }
+}
+
