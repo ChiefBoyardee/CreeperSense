@@ -2,6 +2,9 @@
 
 **CreeperSense** is a **client-only** mod that adds a gentle HUD warning when a **creeper is approaching from behind** — meant to be easier to notice than subtitles alone.
 
+![CreeperSense indicator example (multiple creepers)](assets/screenshots/indicator-multi-chevrons-1.png)
+![CreeperSense indicator example (color/intensity ramp)](assets/screenshots/indicator-multi-chevrons-2.png)
+
 ### How it works
 
 - **Detection**: each tick, the mod looks for creepers within a horizontal radius and checks whether they’re in your **rear arc** (behind you).
