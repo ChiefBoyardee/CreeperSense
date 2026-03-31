@@ -31,3 +31,4 @@ runs
 
 # CI artifact downloads (local)
 release-staging/
+release-staging-*/
