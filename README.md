@@ -4,14 +4,15 @@
 
 ![CreeperSense indicator example (multiple creepers)](assets/screenshots/indicator-multi-chevrons-1.png)
 ![CreeperSense indicator example (color/intensity ramp)](assets/screenshots/indicator-multi-chevrons-2.png)
+![CreeperSense meme mode example](https://i.imgur.com/GMhR9cw.png)
 
 ### How it works
 
 - **Detection**: each tick, the mod looks for creepers within a horizontal radius and checks whether they’re in your **rear arc** (behind you).
 - **Indicator**: when a threat is present, the HUD shows:
-  - a subtle edge wash, and
   - one **chevron per creeper** behind you, arranged along a rear arc
 - **Color/intensity**: chevrons fade **green → yellow → red** as danger increases, with a subtle pulse. If a creeper is **swelling**, its threat ramps up faster.
+- **Vertical filtering**: creepers far above/below you are heavily downweighted (different floors/caves).
 
 ### Modes + settings
 
@@ -19,7 +20,7 @@ Open settings in-game with **O** (rebindable in Controls):
 
 - **Chevrons**: default directional chevrons (one per creeper behind you).
 - **Peripheral**: ARMA-style peripheral circles along the screen edge.
-- **Meme (high danger)**: adds meme overlays only when danger is high (still keeps directional chevrons).
+- **Meme (high danger)**: shows meme overlays only when danger is high. The overlay fades in, and becomes fully opaque only when the creeper is basically at explosion range.
 
 Optional:
 - **Difficulty scaling**: reduces warning radius on higher difficulty to give you less time to react.

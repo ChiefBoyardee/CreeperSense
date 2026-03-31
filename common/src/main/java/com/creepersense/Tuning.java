@@ -26,6 +26,13 @@ public final class Tuning {
     /** Extra intensity from creeper swelling (0–1), scaled before adding to distance-based intensity. */
     public static final float SWELL_INTENSITY_SCALE = 0.45f;
 
+    /**
+     * Vertical falloff for threats: creepers far above/below you are much less actionable (different floors/caves).
+     * We fade intensity from 100% at {@link #VERTICAL_FADE_START} down to 0% at {@link #VERTICAL_FADE_END}.
+     */
+    public static final double VERTICAL_FADE_START = 3.0;
+    public static final double VERTICAL_FADE_END = 10.0;
+
     /** Arc radius for the chevron indicator (pixels). */
     public static final int HUD_ARC_RADIUS_MIN_PX = 60;
 

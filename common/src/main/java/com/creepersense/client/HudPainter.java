@@ -23,7 +23,6 @@ public final class HudPainter {
             case CHEVRONS -> chevrons(graphics, screenWidth, screenHeight, state, partialTick);
             case PERIPHERAL -> peripheral(graphics, screenWidth, screenHeight, state, partialTick);
             case MEME -> {
-                chevrons(graphics, screenWidth, screenHeight, state, partialTick);
                 if (state.displayIntensity() >= cfg.memeModeMinGlobalIntensity) {
                     memeOverlay(graphics, screenWidth, screenHeight, state, partialTick);
                 }
@@ -178,32 +177,58 @@ public final class HudPainter {
         Minecraft mc = Minecraft.getInstance();
         float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
         float pulse = 0.75f + 0.25f * (float) Math.sin(t * 0.55);
-        float alpha = Math.min(1f, state.displayIntensity()) * pulse;
 
-        int warnW = Math.max(44, screenHeight / 14);
+        ClientConfig cfg = ClientConfig.get();
+        float global = clamp01(state.displayIntensity());
+        float tNorm = (global - cfg.memeModeMinGlobalIntensity) / Math.max(1e-4f, (1f - cfg.memeModeMinGlobalIntensity));
+        float eased = smoothstep01(clamp01(tNorm));
+        // Fade in like chevrons/circles, but guarantee full visibility only at "about to explode" intensity.
+        float alpha = global >= 0.95f ? 1f : (eased * pulse);
+
+        int minDim = Math.min(screenWidth, screenHeight);
+        int pad = Math.max(10, minDim / 40);
+
+        int warnW = clamp(Math.round(minDim * 0.085f), 34, 64);
         int warnH = Math.round(warnW * (107f / 117f));
-        int pad = Math.max(8, screenWidth / 60);
 
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
         blitScaled(g, MEME_WARN, pad, pad, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, screenWidth - pad - warnW, pad, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, pad, screenHeight - pad - warnH, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, screenWidth - pad - warnW, screenHeight - pad - warnH, warnW, warnH, 117, 107);
 
-        int speechW = Math.min(screenWidth - pad * 2, (int) (screenWidth * 0.62f));
+        int speechW = Math.min(screenWidth - pad * 2, clamp(Math.round(screenWidth * 0.48f), 240, 520));
         int speechH = Math.round(speechW * (326f / 584f));
         int speechX = (screenWidth - speechW) / 2;
-        int speechY = Math.max(pad + warnH + pad, (screenHeight / 2) - (speechH / 2) - warnH / 2);
+        int speechY = clamp((screenHeight / 2) - (speechH / 2), pad + warnH + pad, screenHeight - pad - speechH - warnH - pad);
         blitScaled(g, MEME_SPEECH, speechX, speechY, speechW, speechH, 584, 326);
 
-        int catW = Math.min(screenWidth / 6, 120);
+        int catW = clamp(Math.round(screenWidth * 0.14f), 54, 110);
         int catH = Math.round(catW * (637f / 450f));
-        blitScaled(g, MEME_CAT, pad, screenHeight - pad - catH - warnH, catW, catH, 450, 637);
+        int catX = pad + warnW + pad;
+        int catY = screenHeight - pad - catH - warnH;
+        blitScaled(g, MEME_CAT, catX, catY, catW, catH, 450, 637);
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
     }
 
     private static void blitScaled(GuiGraphics g, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
-        g.blit(tex, x, y, 0, 0, w, h, texW, texH);
+        // Draw the full texture region (texW x texH) scaled into (w x h).
+        g.blit(tex, x, y, w, h, 0, 0, texW, texH, texW, texH);
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
+    private static float clamp01(float v) {
+        return Math.max(0f, Math.min(1f, v));
+    }
+
+    private static float smoothstep01(float t) {
+        return t * t * (3f - 2f * t);
     }
 }

@@ -22,7 +22,6 @@ public final class HudPainter {
             case CHEVRONS -> chevrons(graphics, screenWidth, screenHeight, state, partialTick);
             case PERIPHERAL -> peripheral(graphics, screenWidth, screenHeight, state, partialTick);
             case MEME -> {
-                chevrons(graphics, screenWidth, screenHeight, state, partialTick);
                 if (state.displayIntensity() >= cfg.memeModeMinGlobalIntensity) {
                     memeOverlay(graphics, screenWidth, screenHeight, state, partialTick);
                 }
@@ -187,30 +186,37 @@ public final class HudPainter {
             Identifier.fromNamespaceAndPath("creepersense", "textures/gui/meme/meme-cat.png");
 
     private static void memeOverlay(GuiGraphicsExtractor g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
-        Minecraft mc = Minecraft.getInstance();
         // 26.1 GUI pipeline does not expose shader-color helpers here; keep meme overlays binary-on.
 
-        int warnW = Math.max(44, screenHeight / 14);
+        int minDim = Math.min(screenWidth, screenHeight);
+        int pad = Math.max(10, minDim / 40);
+
+        int warnW = clamp(Math.round(minDim * 0.085f), 34, 64);
         int warnH = Math.round(warnW * (107f / 117f));
-        int pad = Math.max(8, screenWidth / 60);
 
         blitScaled(g, MEME_WARN, pad, pad, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, screenWidth - pad - warnW, pad, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, pad, screenHeight - pad - warnH, warnW, warnH, 117, 107);
         blitScaled(g, MEME_WARN, screenWidth - pad - warnW, screenHeight - pad - warnH, warnW, warnH, 117, 107);
 
-        int speechW = Math.min(screenWidth - pad * 2, (int) (screenWidth * 0.62f));
+        int speechW = Math.min(screenWidth - pad * 2, clamp(Math.round(screenWidth * 0.48f), 240, 520));
         int speechH = Math.round(speechW * (326f / 584f));
         int speechX = (screenWidth - speechW) / 2;
-        int speechY = Math.max(pad + warnH + pad, (screenHeight / 2) - (speechH / 2) - warnH / 2);
+        int speechY = clamp((screenHeight / 2) - (speechH / 2), pad + warnH + pad, screenHeight - pad - speechH - warnH - pad);
         blitScaled(g, MEME_SPEECH, speechX, speechY, speechW, speechH, 584, 326);
 
-        int catW = Math.min(screenWidth / 6, 120);
+        int catW = clamp(Math.round(screenWidth * 0.14f), 54, 110);
         int catH = Math.round(catW * (637f / 450f));
-        blitScaled(g, MEME_CAT, pad, screenHeight - pad - catH - warnH, catW, catH, 450, 637);
+        int catX = pad + warnW + pad;
+        int catY = screenHeight - pad - catH - warnH;
+        blitScaled(g, MEME_CAT, catX, catY, catW, catH, 450, 637);
     }
 
     private static void blitScaled(GuiGraphicsExtractor g, Identifier tex, int x, int y, int w, int h, int texW, int texH) {
         g.blit(tex, x, y, 0, 0, w, h, texW, texH);
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
     }
 }

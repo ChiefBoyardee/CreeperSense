@@ -70,6 +70,10 @@ public final class CreeperBehindDetector {
         lz /= hLookLen;
 
         Vec3 to = creeper.position().subtract(player.position());
+        double dy = Math.abs(to.y);
+        if (dy >= Tuning.VERTICAL_FADE_END) {
+            return Scored.ZERO;
+        }
         double tx = to.x;
         double tz = to.z;
         double hDist = Math.sqrt(tx * tx + tz * tz);
@@ -94,6 +98,11 @@ public final class CreeperBehindDetector {
         float fuse = Math.min(1f, swell) * Tuning.SWELL_INTENSITY_SCALE;
 
         float intensity = Math.min(1f, (float) distFactor + fuse);
+        if (dy > Tuning.VERTICAL_FADE_START) {
+            double t = (dy - Tuning.VERTICAL_FADE_START) / (Tuning.VERTICAL_FADE_END - Tuning.VERTICAL_FADE_START);
+            double verticalFactor = 1.0 - Math.min(1.0, Math.max(0.0, t));
+            intensity *= (float) verticalFactor;
+        }
 
         // Signed angle from look->target in XZ, mapped around the "behind" axis:
         // 0 = behind, + = behind-left, - = behind-right.
