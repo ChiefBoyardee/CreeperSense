@@ -23,7 +23,7 @@ jobs:
           cache: gradle
 
       - name: Ensure Gradle wrapper executable
-        run: chmod +x ./gradlew
+        run: chmod +x ./gradlew mc-26.1/gradlew
 
       - name: Build
         run: ./gradlew :${{ matrix.loader }}:build --no-daemon
