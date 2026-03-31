@@ -28,4 +28,9 @@ public final class CreeperSenseClient {
         int h = graphics.guiHeight();
         HudPainter.render(graphics, w, h, partialTick, STATE);
     }
+
+    public static void openSettings() {
+        Minecraft mc = Minecraft.getInstance();
+        mc.setScreen(new CreeperSenseConfigScreen(mc.screen));
+    }
 }

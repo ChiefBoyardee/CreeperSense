@@ -1,11 +1,13 @@
 package com.creepersense.client;
 
 import com.creepersense.Tuning;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 
 /**
- * Soft rear-edge bars + subtle chevron — intensity drives alpha only (no pop-in).
+ * CreeperSense HUD rendering.
  */
 public final class HudPainter {
 
@@ -16,17 +18,17 @@ public final class HudPainter {
         if (a < 0.01f) {
             return;
         }
-        int ai = (int) (255 * a);
-        // Muted moss / creeper hint (avoid loud red to stay “gentle”).
-        int base = (ai << 24) | (0x5C << 16) | (0x8A << 8) | 0x3D;
-
-        int strip = Math.max(4, screenWidth / 90);
-        int h = screenHeight;
-
-        graphics.fill(0, 0, strip, h, base);
-        graphics.fill(screenWidth - strip, 0, screenWidth, h, base);
-
-        chevrons(graphics, screenWidth, screenHeight, state, partialTick);
+        ClientConfig cfg = ClientConfig.get();
+        switch (cfg.mode) {
+            case CHEVRONS -> chevrons(graphics, screenWidth, screenHeight, state, partialTick);
+            case PERIPHERAL -> peripheral(graphics, screenWidth, screenHeight, state, partialTick);
+            case MEME -> {
+                chevrons(graphics, screenWidth, screenHeight, state, partialTick);
+                if (state.displayIntensity() >= cfg.memeModeMinGlobalIntensity) {
+                    memeOverlay(graphics, screenWidth, screenHeight, state, partialTick);
+                }
+            }
+        }
     }
 
     private static void chevrons(GuiGraphics graphics, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
@@ -112,5 +114,96 @@ public final class HudPainter {
         }
 
         pose.popPose();
+    }
+
+    private static void peripheral(GuiGraphics g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
+        int cx = screenWidth / 2;
+        int cy = screenHeight / 2;
+        int margin = Math.max(18, Math.min(screenWidth, screenHeight) / 30);
+        int maxR = (Math.min(screenWidth, screenHeight) / 2) - margin;
+
+        Minecraft mc = Minecraft.getInstance();
+        float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
+        float pulse = 0.85f + 0.15f * (float) Math.sin(t * 0.35);
+
+        float global = Math.min(1f, state.displayIntensity());
+        int n = Math.min(state.trackedCount(), 12);
+
+        for (int i = 0; i < n; i++) {
+            float intensity = state.intensityAt(i);
+            if (intensity < 0.06f) continue;
+
+            float angle = state.angleAt(i);
+            float dx = -(float) Math.sin(angle);
+            float dy = (float) Math.cos(angle);
+
+            int px = Math.round(cx + dx * maxR);
+            int py = Math.round(cy + dy * maxR);
+
+            float per = Math.min(1f, 0.10f + 0.90f * intensity);
+            int ai = (int) (255 * global * per * pulse);
+            int rgb = 0xF0D84A;
+            int argb = (ai << 24) | rgb;
+
+            int r = Math.max(8, Math.min(16, screenHeight / 54));
+            int thick = Math.max(2, r / 4);
+            drawRing(g, px, py, r, thick, argb);
+        }
+    }
+
+    private static void drawRing(GuiGraphics g, int cx, int cy, int r, int thick, int argb) {
+        int rOuter = r + thick;
+        int rOuter2 = rOuter * rOuter;
+        int rInner2 = Math.max(0, r - thick) * Math.max(0, r - thick);
+
+        for (int y = -rOuter; y <= rOuter; y++) {
+            int yy = y * y;
+            for (int x = -rOuter; x <= rOuter; x++) {
+                int d2 = x * x + yy;
+                if (d2 <= rOuter2 && d2 >= rInner2) {
+                    g.fill(cx + x, cy + y, cx + x + 1, cy + y + 1, argb);
+                }
+            }
+        }
+    }
+
+    private static final ResourceLocation MEME_WARN =
+            ResourceLocation.fromNamespaceAndPath("creepersense", "textures/gui/meme/meme-warning-triangle.png");
+    private static final ResourceLocation MEME_SPEECH =
+            ResourceLocation.fromNamespaceAndPath("creepersense", "textures/gui/meme/meme-speech-bubble-watch-out-bro.png");
+    private static final ResourceLocation MEME_CAT =
+            ResourceLocation.fromNamespaceAndPath("creepersense", "textures/gui/meme/meme-cat.png");
+
+    private static void memeOverlay(GuiGraphics g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
+        Minecraft mc = Minecraft.getInstance();
+        float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
+        float pulse = 0.75f + 0.25f * (float) Math.sin(t * 0.55);
+        float alpha = Math.min(1f, state.displayIntensity()) * pulse;
+
+        int warnW = Math.max(44, screenHeight / 14);
+        int warnH = Math.round(warnW * (107f / 117f));
+        int pad = Math.max(8, screenWidth / 60);
+
+        RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+        blitScaled(g, MEME_WARN, pad, pad, warnW, warnH, 117, 107);
+        blitScaled(g, MEME_WARN, screenWidth - pad - warnW, pad, warnW, warnH, 117, 107);
+        blitScaled(g, MEME_WARN, pad, screenHeight - pad - warnH, warnW, warnH, 117, 107);
+        blitScaled(g, MEME_WARN, screenWidth - pad - warnW, screenHeight - pad - warnH, warnW, warnH, 117, 107);
+
+        int speechW = Math.min(screenWidth - pad * 2, (int) (screenWidth * 0.62f));
+        int speechH = Math.round(speechW * (326f / 584f));
+        int speechX = (screenWidth - speechW) / 2;
+        int speechY = Math.max(pad + warnH + pad, (screenHeight / 2) - (speechH / 2) - warnH / 2);
+        blitScaled(g, MEME_SPEECH, speechX, speechY, speechW, speechH, 584, 326);
+
+        int catW = Math.min(screenWidth / 6, 120);
+        int catH = Math.round(catW * (637f / 450f));
+        blitScaled(g, MEME_CAT, pad, screenHeight - pad - catH - warnH, catW, catH, 450, 637);
+
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
+    private static void blitScaled(GuiGraphics g, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
+        g.blit(tex, x, y, 0, 0, w, h, texW, texH);
     }
 }

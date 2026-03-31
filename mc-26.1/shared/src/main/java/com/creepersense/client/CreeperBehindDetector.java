@@ -2,6 +2,7 @@ package com.creepersense.client;
 
 import com.creepersense.Tuning;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.phys.AABB;
@@ -21,7 +22,8 @@ public final class CreeperBehindDetector {
             return new DetectionResult(0f, java.util.List.of());
         }
         Player player = mc.player;
-        AABB box = player.getBoundingBox().inflate(Tuning.SEARCH_RADIUS);
+        float radius = effectiveSearchRadius(mc);
+        AABB box = player.getBoundingBox().inflate(radius);
         float bestIntensity = 0f;
         ArrayList<DetectedCreeper> creepers = new ArrayList<>();
 
@@ -29,7 +31,7 @@ public final class CreeperBehindDetector {
             if (!creeper.isAlive()) {
                 continue;
             }
-            Scored s = scoreCreeper(player, creeper);
+            Scored s = scoreCreeper(player, creeper, radius);
             if (s.intensity > bestIntensity) {
                 bestIntensity = s.intensity;
             }
@@ -40,7 +42,23 @@ public final class CreeperBehindDetector {
         return new DetectionResult(Math.min(1f, bestIntensity), creepers);
     }
 
-    private static Scored scoreCreeper(Player player, Creeper creeper) {
+    private static float effectiveSearchRadius(Minecraft mc) {
+        float radius = (float) Tuning.SEARCH_RADIUS;
+        ClientConfig cfg = ClientConfig.get();
+        if (!cfg.difficultyScalingEnabled || mc.level == null) {
+            return radius;
+        }
+        Difficulty d = mc.level.getDifficulty();
+        float mult = switch (d) {
+            case PEACEFUL -> 0.0f;
+            case EASY -> 1.10f;
+            case NORMAL -> 1.00f;
+            case HARD -> 0.85f;
+        };
+        return radius * mult;
+    }
+
+    private static Scored scoreCreeper(Player player, Creeper creeper, float radius) {
         Vec3 look = player.getLookAngle();
         double lx = look.x;
         double lz = look.z;
@@ -55,7 +73,7 @@ public final class CreeperBehindDetector {
         double tx = to.x;
         double tz = to.z;
         double hDist = Math.sqrt(tx * tx + tz * tz);
-        if (hDist < 1e-6 || hDist > Tuning.SEARCH_RADIUS) {
+        if (hDist < 1e-6 || hDist > radius) {
             return Scored.ZERO;
         }
         tx /= hDist;
@@ -66,7 +84,7 @@ public final class CreeperBehindDetector {
             return Scored.ZERO;
         }
 
-        double span = Tuning.SEARCH_RADIUS - Tuning.CLOSE_DISTANCE;
+        double span = radius - Tuning.CLOSE_DISTANCE;
         double distFactor = span > 1e-6
                 ? 1.0 - Math.min(1.0, Math.max(0.0, (hDist - Tuning.CLOSE_DISTANCE) / span))
                 : 1.0;

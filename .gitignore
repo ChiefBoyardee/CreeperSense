@@ -32,3 +32,6 @@ runs
 # CI artifact downloads (local)
 release-staging/
 release-staging-*/
+
+# Local artwork sources (not shipped in jars)
+assets/meme-images/
