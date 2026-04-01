@@ -8,12 +8,13 @@ import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import org.lwjgl.glfw.GLFW;
 
-@EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Bus.MOD)
 public final class CreeperSenseNeoForgeClient {
 
     private CreeperSenseNeoForgeClient() {}
@@ -30,17 +31,25 @@ public final class CreeperSenseNeoForgeClient {
         event.register(OPEN_SETTINGS);
     }
 
-    @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
-        CreeperSenseClient.tick(Minecraft.getInstance());
-        while (OPEN_SETTINGS.consumeClick()) {
-            CreeperSenseClient.openSettings();
+    // Gameplay/HUD events are on the main NeoForge event bus, not the MOD bus.
+    @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT)
+    public static final class RuntimeEvents {
+        private RuntimeEvents() {}
+
+        @SubscribeEvent
+        public static void onClientTick(ClientTickEvent.Post event) {
+            CreeperSenseClient.tick(Minecraft.getInstance());
+            while (OPEN_SETTINGS.consumeClick()) {
+                CreeperSenseClient.openSettings();
+            }
+        }
+
+        @SubscribeEvent
+        public static void onHud(RenderGuiEvent.Post event) {
+            float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+            CreeperSenseClient.renderHud(event.getGuiGraphics(), partialTick);
         }
     }
 
-    @SubscribeEvent
-    public static void onHud(RenderGuiEvent.Post event) {
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-        CreeperSenseClient.renderHud(event.getGuiGraphics(), partialTick);
-    }
+    // NOTE: Keep this class for MOD-bus events only.
 }

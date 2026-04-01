@@ -29,6 +29,15 @@ public final class CreeperSenseClient {
         HudPainter.render(graphics, w, h, partialTick, STATE);
     }
 
+    public static void renderHudLayer(GuiGraphicsExtractor graphics, float partialTick, boolean underHotbar) {
+        ClientConfig.Mode mode = ClientConfig.get().mode;
+        boolean isPeripheral = mode == ClientConfig.Mode.PERIPHERAL;
+        if (underHotbar != isPeripheral) {
+            return;
+        }
+        renderHud(graphics, partialTick);
+    }
+
     public static void openSettings() {
         Minecraft mc = Minecraft.getInstance();
         mc.setScreen(new CreeperSenseConfigScreen(mc.screen));

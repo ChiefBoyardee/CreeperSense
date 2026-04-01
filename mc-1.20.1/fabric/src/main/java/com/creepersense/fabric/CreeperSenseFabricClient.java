@@ -25,8 +25,10 @@ public final class CreeperSenseFabricClient implements ClientModInitializer {
                 CreeperSenseClient.openSettings();
             }
         });
-        HudRenderCallback.EVENT.register((guiGraphics, tickDelta) ->
-                CreeperSenseClient.renderHud(guiGraphics, tickDelta));
+        HudRenderCallback.EVENT.register((guiGraphics, tickDelta) -> {
+            // 1.20.1 Fabric doesn't provide HUD element ordering; peripheral uses a hotbar reserve to avoid overlap.
+            CreeperSenseClient.renderHud(guiGraphics, tickDelta);
+        });
     }
 }
 

@@ -5,6 +5,7 @@ import com.creepersense.client.CreeperSenseClient;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.event.TickEvent;
@@ -49,8 +50,13 @@ public final class CreeperSenseForgeMod {
 
         @SubscribeEvent
         public static void registerOverlays(RegisterGuiOverlaysEvent event) {
-            event.registerAboveAll(Constants.MOD_ID + ":indicator", (gui, guiGraphics, partialTick, screenWidth, screenHeight) ->
-                    CreeperSenseClient.renderHud(guiGraphics, partialTick));
+            event.registerBelow(VanillaGuiOverlay.HOTBAR.id(), Constants.MOD_ID + ":indicator_under_hotbar",
+                    (gui, guiGraphics, partialTick, screenWidth, screenHeight) ->
+                            CreeperSenseClient.renderHudLayer(guiGraphics, partialTick, true));
+
+            event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), Constants.MOD_ID + ":indicator_over",
+                    (gui, guiGraphics, partialTick, screenWidth, screenHeight) ->
+                            CreeperSenseClient.renderHudLayer(guiGraphics, partialTick, false));
         }
     }
 }

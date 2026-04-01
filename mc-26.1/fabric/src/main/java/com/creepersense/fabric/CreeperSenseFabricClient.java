@@ -28,9 +28,13 @@ public final class CreeperSenseFabricClient implements ClientModInitializer {
                 CreeperSenseClient.openSettings();
             }
         });
-        Identifier id = Identifier.fromNamespaceAndPath("creepersense", "indicator");
-        HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, id, (graphics, deltaTracker) ->
-                CreeperSenseClient.renderHud(graphics, deltaTracker.getGameTimeDeltaPartialTick(true)));
+        Identifier underlayId = Identifier.fromNamespaceAndPath("creepersense", "indicator_underlay");
+        HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, underlayId, (graphics, deltaTracker) ->
+                CreeperSenseClient.renderHudLayer(graphics, deltaTracker.getGameTimeDeltaPartialTick(true), true));
+
+        Identifier overlayId = Identifier.fromNamespaceAndPath("creepersense", "indicator_overlay");
+        HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, overlayId, (graphics, deltaTracker) ->
+                CreeperSenseClient.renderHudLayer(graphics, deltaTracker.getGameTimeDeltaPartialTick(true), false));
     }
 }
 

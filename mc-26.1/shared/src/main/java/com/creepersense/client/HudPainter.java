@@ -3,6 +3,7 @@ package com.creepersense.client;
 import com.creepersense.Tuning;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -129,8 +130,13 @@ public final class HudPainter {
     private static void peripheral(GuiGraphicsExtractor g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
         int cx = screenWidth / 2;
         int cy = screenHeight / 2;
+
         int margin = Math.max(18, Math.min(screenWidth, screenHeight) / 30);
-        int maxR = (Math.min(screenWidth, screenHeight) / 2) - margin;
+        int left = margin;
+        int right = screenWidth - margin;
+        int top = margin;
+        // Draw all the way to the bottom; the hotbar will render over us (NeoForge pre-event / Fabric before HOTBAR).
+        int bottom = screenHeight - margin;
 
         Minecraft mc = Minecraft.getInstance();
         float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
@@ -147,18 +153,38 @@ public final class HudPainter {
             float dx = -(float) Math.sin(angle);
             float dy = (float) Math.cos(angle);
 
-            int px = Math.round(cx + dx * maxR);
-            int py = Math.round(cy + dy * maxR);
+            int[] p = placeOnInsetRect(cx, cy, dx, dy, left, right, top, bottom);
+            int px = p[0];
+            int py = p[1];
 
             float per = Math.min(1f, 0.10f + 0.90f * intensity);
             int ai = (int) (255 * global * per * pulse);
-            int rgb = 0xF0D84A;
+            int rgb = rampRgb(intensity);
             int argb = (ai << 24) | rgb;
 
-            int r = Math.max(8, Math.min(16, screenHeight / 54));
+            // Smaller, ARMA-style "pips" along the edges.
+            int r = clamp(Math.round(screenHeight / 80f), 5, 10);
             int thick = Math.max(2, r / 4);
             drawRing(g, px, py, r, thick, argb);
         }
+    }
+
+    private static int[] placeOnInsetRect(int cx, int cy, float dx, float dy, int left, int right, int top, int bottom) {
+        // Intersect the ray from screen center with the inset rectangle, so indicators "skirt" the edges.
+        float eps = 1e-4f;
+        float invDx = 1f / (Math.abs(dx) < eps ? (dx < 0f ? -eps : eps) : dx);
+        float invDy = 1f / (Math.abs(dy) < eps ? (dy < 0f ? -eps : eps) : dy);
+
+        float tx = dx > 0f ? (right - cx) * invDx : (left - cx) * invDx;
+        float ty = dy > 0f ? (bottom - cy) * invDy : (top - cy) * invDy;
+        float t = Math.min(tx, ty);
+
+        int px = Math.round(cx + dx * t);
+        int py = Math.round(cy + dy * t);
+
+        px = clamp(px, left, right);
+        py = clamp(py, top, bottom);
+        return new int[] { px, py };
     }
 
     private static void drawRing(GuiGraphicsExtractor g, int cx, int cy, int r, int thick, int argb) {
@@ -186,7 +212,15 @@ public final class HudPainter {
             Identifier.fromNamespaceAndPath("creepersense", "textures/gui/meme/meme-cat.png");
 
     private static void memeOverlay(GuiGraphicsExtractor g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
-        // 26.1 GUI pipeline does not expose shader-color helpers here; keep meme overlays binary-on.
+        Minecraft mc = Minecraft.getInstance();
+
+        ClientConfig cfg = ClientConfig.get();
+        float global = clamp01(state.displayIntensity());
+        float tNorm = (global - cfg.memeModeMinGlobalIntensity) / Math.max(1e-4f, (1f - cfg.memeModeMinGlobalIntensity));
+        float eased = smoothstep01(clamp01(tNorm));
+        // Fade in, but guarantee full visibility only at "about to explode" intensity.
+        float alpha = global >= 0.95f ? 1f : eased;
+        int alphaByte = clamp(Math.round(alpha * 255f), 0, 255);
 
         int minDim = Math.min(screenWidth, screenHeight);
         int pad = Math.max(10, minDim / 40);
@@ -194,29 +228,74 @@ public final class HudPainter {
         int warnW = clamp(Math.round(minDim * 0.085f), 34, 64);
         int warnH = Math.round(warnW * (107f / 117f));
 
-        blitScaled(g, MEME_WARN, pad, pad, warnW, warnH, 117, 107);
-        blitScaled(g, MEME_WARN, screenWidth - pad - warnW, pad, warnW, warnH, 117, 107);
-        blitScaled(g, MEME_WARN, pad, screenHeight - pad - warnH, warnW, warnH, 117, 107);
-        blitScaled(g, MEME_WARN, screenWidth - pad - warnW, screenHeight - pad - warnH, warnW, warnH, 117, 107);
+        blitScaledAlpha(g, MEME_WARN, pad, pad, warnW, warnH, 117, 107, alphaByte);
+        blitScaledAlpha(g, MEME_WARN, screenWidth - pad - warnW, pad, warnW, warnH, 117, 107, alphaByte);
+        blitScaledAlpha(g, MEME_WARN, pad, screenHeight - pad - warnH, warnW, warnH, 117, 107, alphaByte);
+        blitScaledAlpha(g, MEME_WARN, screenWidth - pad - warnW, screenHeight - pad - warnH, warnW, warnH, 117, 107, alphaByte);
 
         int speechW = Math.min(screenWidth - pad * 2, clamp(Math.round(screenWidth * 0.48f), 240, 520));
         int speechH = Math.round(speechW * (326f / 584f));
         int speechX = (screenWidth - speechW) / 2;
         int speechY = clamp((screenHeight / 2) - (speechH / 2), pad + warnH + pad, screenHeight - pad - speechH - warnH - pad);
-        blitScaled(g, MEME_SPEECH, speechX, speechY, speechW, speechH, 584, 326);
+        blitScaledAlpha(g, MEME_SPEECH, speechX, speechY, speechW, speechH, 584, 326, alphaByte);
 
         int catW = clamp(Math.round(screenWidth * 0.14f), 54, 110);
         int catH = Math.round(catW * (637f / 450f));
         int catX = pad + warnW + pad;
         int catY = screenHeight - pad - catH - warnH;
-        blitScaled(g, MEME_CAT, catX, catY, catW, catH, 450, 637);
+        blitScaledAlpha(g, MEME_CAT, catX, catY, catW, catH, 450, 637, alphaByte);
     }
 
     private static void blitScaled(GuiGraphicsExtractor g, Identifier tex, int x, int y, int w, int h, int texW, int texH) {
-        g.blit(tex, x, y, 0, 0, w, h, texW, texH);
+        g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0f, 0f, w, h, texW, texH, texW, texH);
+    }
+
+    private static void blitScaledAlpha(
+            GuiGraphicsExtractor g,
+            Identifier tex,
+            int x,
+            int y,
+            int w,
+            int h,
+            int texW,
+            int texH,
+            int alphaByte
+    ) {
+        if (alphaByte <= 0) return;
+        int argb = (alphaByte << 24) | 0xFFFFFF;
+        // Use the overload with explicit src size + texture size + packed color (ARGB).
+        // Signature: (pipeline, tex, x, y, u, v, width, height, srcWidth, srcHeight, textureWidth, textureHeight, color)
+        // Use non-premultiplied alpha so textures fade to transparent (not “washed to white”).
+        g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0f, 0f, w, h, texW, texH, texW, texH, argb);
+    }
+
+    private static int rampRgb(float intensity01) {
+        // Match chevron gradient: green -> yellow -> red.
+        float p01 = Math.min(1f, Math.max(0f, intensity01));
+        int rC, gC, bC;
+        if (p01 < 0.55f) {
+            float u = p01 / 0.55f;
+            rC = (int) (0x55 + (0xF0 - 0x55) * u);
+            gC = (int) (0xD6 + (0xD8 - 0xD6) * u);
+            bC = (int) (0x4A + (0x4A - 0x4A) * u);
+        } else {
+            float u = (p01 - 0.55f) / 0.45f;
+            rC = (int) (0xF0 + (0xFF - 0xF0) * u);
+            gC = (int) (0xD8 + (0x3A - 0xD8) * u);
+            bC = (int) (0x4A + (0x2A - 0x4A) * u);
+        }
+        return (rC << 16) | (gC << 8) | bC;
     }
 
     private static int clamp(int v, int lo, int hi) {
         return Math.max(lo, Math.min(hi, v));
+    }
+
+    private static float clamp01(float v) {
+        return Math.max(0f, Math.min(1f, v));
+    }
+
+    private static float smoothstep01(float t) {
+        return t * t * (3f - 2f * t);
     }
 }

@@ -2,6 +2,7 @@ package com.creepersense.neoforge;
 
 import com.creepersense.Constants;
 import com.creepersense.client.CreeperSenseClient;
+import com.creepersense.client.ClientConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
@@ -43,9 +44,18 @@ public final class CreeperSenseClientEvents {
     }
 
     @SubscribeEvent
-    public static void onHud(RenderGuiEvent.Post event) {
+    public static void onHudPre(RenderGuiEvent.Pre event) {
+        if (ClientConfig.get().mode != ClientConfig.Mode.PERIPHERAL) {
+            return;
+        }
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-        CreeperSenseClient.renderHud(event.getGuiGraphics(), partialTick);
+        CreeperSenseClient.renderHudLayer(event.getGuiGraphics(), partialTick, true);
+    }
+
+    @SubscribeEvent
+    public static void onHudPost(RenderGuiEvent.Post event) {
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        CreeperSenseClient.renderHudLayer(event.getGuiGraphics(), partialTick, false);
     }
 }
 

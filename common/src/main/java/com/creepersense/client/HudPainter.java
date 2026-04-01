@@ -118,8 +118,12 @@ public final class HudPainter {
     private static void peripheral(GuiGraphics g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
         int cx = screenWidth / 2;
         int cy = screenHeight / 2;
+
         int margin = Math.max(18, Math.min(screenWidth, screenHeight) / 30);
-        int maxR = (Math.min(screenWidth, screenHeight) / 2) - margin;
+        int left = margin;
+        int right = screenWidth - margin;
+        int top = margin;
+        int bottom = screenHeight - margin;
 
         Minecraft mc = Minecraft.getInstance();
         float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
@@ -136,18 +140,54 @@ public final class HudPainter {
             float dx = -(float) Math.sin(angle);
             float dy = (float) Math.cos(angle);
 
-            int px = Math.round(cx + dx * maxR);
-            int py = Math.round(cy + dy * maxR);
+            int[] p = placeOnInsetRect(cx, cy, dx, dy, left, right, top, bottom);
+            int px = p[0];
+            int py = p[1];
 
             float per = Math.min(1f, 0.10f + 0.90f * intensity);
             int ai = (int) (255 * global * per * pulse);
-            int rgb = 0xF0D84A;
+            int rgb = rampRgb(intensity);
             int argb = (ai << 24) | rgb;
 
-            int r = Math.max(8, Math.min(16, screenHeight / 54));
+            int r = clamp(Math.round(screenHeight / 80f), 5, 10);
             int thick = Math.max(2, r / 4);
             drawRing(g, px, py, r, thick, argb);
         }
+    }
+
+    private static int rampRgb(float intensity01) {
+        // Match chevron gradient: green -> yellow -> red.
+        float p01 = Math.min(1f, Math.max(0f, intensity01));
+        int rC, gC, bC;
+        if (p01 < 0.55f) {
+            float u = p01 / 0.55f;
+            rC = (int) (0x55 + (0xF0 - 0x55) * u);
+            gC = (int) (0xD6 + (0xD8 - 0xD6) * u);
+            bC = (int) (0x4A + (0x4A - 0x4A) * u);
+        } else {
+            float u = (p01 - 0.55f) / 0.45f;
+            rC = (int) (0xF0 + (0xFF - 0xF0) * u);
+            gC = (int) (0xD8 + (0x3A - 0xD8) * u);
+            bC = (int) (0x4A + (0x2A - 0x4A) * u);
+        }
+        return (rC << 16) | (gC << 8) | bC;
+    }
+
+    private static int[] placeOnInsetRect(int cx, int cy, float dx, float dy, int left, int right, int top, int bottom) {
+        float eps = 1e-4f;
+        float invDx = 1f / (Math.abs(dx) < eps ? (dx < 0f ? -eps : eps) : dx);
+        float invDy = 1f / (Math.abs(dy) < eps ? (dy < 0f ? -eps : eps) : dy);
+
+        float tx = dx > 0f ? (right - cx) * invDx : (left - cx) * invDx;
+        float ty = dy > 0f ? (bottom - cy) * invDy : (top - cy) * invDy;
+        float t = Math.min(tx, ty);
+
+        int px = Math.round(cx + dx * t);
+        int py = Math.round(cy + dy * t);
+
+        px = clamp(px, left, right);
+        py = clamp(py, top, bottom);
+        return new int[] { px, py };
     }
 
     private static void drawRing(GuiGraphics g, int cx, int cy, int r, int thick, int argb) {
@@ -175,15 +215,13 @@ public final class HudPainter {
 
     private static void memeOverlay(GuiGraphics g, int screenWidth, int screenHeight, ThreatState state, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
-        float t = mc.level != null ? mc.level.getGameTime() + partialTick : 0f;
-        float pulse = 0.75f + 0.25f * (float) Math.sin(t * 0.55);
 
         ClientConfig cfg = ClientConfig.get();
         float global = clamp01(state.displayIntensity());
         float tNorm = (global - cfg.memeModeMinGlobalIntensity) / Math.max(1e-4f, (1f - cfg.memeModeMinGlobalIntensity));
         float eased = smoothstep01(clamp01(tNorm));
         // Fade in like chevrons/circles, but guarantee full visibility only at "about to explode" intensity.
-        float alpha = global >= 0.95f ? 1f : (eased * pulse);
+        float alpha = global >= 0.95f ? 1f : eased;
 
         int minDim = Math.min(screenWidth, screenHeight);
         int pad = Math.max(10, minDim / 40);
